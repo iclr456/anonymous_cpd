@@ -1,7 +1,5 @@
 """The four consecutive-embedding statistics used by the change-point pipeline."""
 
-from __future__ import annotations
-
 import numpy as np
 from sklearn.covariance import LedoitWolf
 

@@ -1,5 +1,4 @@
 """Create complete sliding context windows from numeric time-series inputs."""
-from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path

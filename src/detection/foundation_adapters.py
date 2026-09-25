@@ -1,7 +1,5 @@
 """Embedding adapters for locally downloaded time-series foundation models."""
 
-from __future__ import annotations
-
 import importlib.util
 from pathlib import Path
 

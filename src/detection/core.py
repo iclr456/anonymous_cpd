@@ -4,8 +4,6 @@ Input series use the repository convention ``(time, channels)``. Model batches
 use the common TSFM convention ``(batch, channels, time)``.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, runtime_checkable

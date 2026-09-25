@@ -1,5 +1,4 @@
 """Decode videos with OpenCV and create centered frame context windows."""
-from __future__ import annotations
 import argparse
 import json
 import re

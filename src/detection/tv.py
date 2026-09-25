@@ -1,7 +1,5 @@
 """Temporal total-variation denoising for embedding trajectories."""
 
-from __future__ import annotations
-
 import numpy as np
 
 

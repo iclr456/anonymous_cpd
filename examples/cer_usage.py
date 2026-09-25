@@ -13,8 +13,6 @@ Run from the package root:
     python examples/cer_usage.py --backend moment --model AutonLab/MOMENT-1-small
 """
 
-from __future__ import annotations
-
 import argparse
 import sys
 from pathlib import Path
