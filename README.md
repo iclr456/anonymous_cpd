@@ -1,8 +1,10 @@
 # Change-point detection using foundation models
 
-One offline pipeline for time-series and video embeddings: context windows,
-foundation-model embeddings, covariance fitting, TV denoising, four scalar
-statistics, and SCAN change-point detection.
+This repository contains the code for **GAS-FM**, a training-free framework for change-point detection using frozen foundation-model representations. It supports both **time series** and **video**, and includes:
+- representation extraction from pretrained foundation models,
+- the GAS scalarization and change-point detection pipeline,
+- the **change-encoding rate (CER)**, which measures how well latent representations preserve annotated changes, and
+- configuration files and scripts to reproduce the experiments in the paper.
 
 <table>
   <tr>
@@ -22,30 +24,10 @@ statistics, and SCAN change-point detection.
 ## Quick start
 
 Install the dependencies using `requirements.txt` for your foundation environment,
-then install this package. The requirements file is an environment snapshot with
-a CUDA-specific PyTorch build; install only the backends needed for your models.
-
+then install this package. 
 ```sh
 python -m pip install -r requirements.txt
-python -m pip install -e ".[scan]"
-python -m detection --config configs/example.json
-python -m detection.evaluate --predictions results/example_jobs/synthetic/detections.json --labels examples/labels.json --tolerance 24 --output results/example_jobs/metrics.csv
 ```
-
-The example uses deterministic window summaries and requires no model weights.
-It checks the processing path, not foundation-model accuracy. The 600-observation
-signal changes at zero-based indices 200 and 400; SCAN uses 19 bootstrap samples.
-Use a fresh output directory when changing settings or inputs.
-
-For an example with both time-series data and saved vision-shaped embeddings:
-
-```sh
-python examples/make_inputs.py
-python -m detection --config configs/unified_example.json
-```
-
-Download only the models you need and keep their entries in the configuration's
-`jobs` list. Set each job's `model.path` to its downloaded model directory.
 
 **Time-series foundation models**
 
@@ -73,6 +55,48 @@ Download only the models you need and keep their entries in the configuration's
 | DINO ViT-B/16 | DINO-B/16 | [facebook/dino-vitb16](https://huggingface.co/facebook/dino-vitb16) |
 | DINOv2 ViT-S/14 | DINOv2-S/14 | [facebook/dinov2-small](https://huggingface.co/facebook/dinov2-small) |
 | DINOv2 ViT-B/14 | DINOv2-B/14 | [facebook/dinov2-base](https://huggingface.co/facebook/dinov2-base) |
+
+
+## Change Encoding Ratio (CER)
+
+The Change Encoding Ratio (CER) measures whether an annotated change in the input sequence remains distinguishable in the foundation-model representation space. For each change point, CER compares the representation discrepancy between embeddings before and after the change with a reference discrepancy obtained from a no-change background sequence.
+
+**Usage Example**
+
+```{python}
+from change_encoding_ratio import CER
+from detection.core import run_embedding_pipeline
+from detection.foundation_adapters import load_foundation_adapter
+
+# target: (1200, 1) with changes at 400 (mean shift) and 800 (variance + period change)
+# background: (1000, 1), same process as segment 1, no changes
+
+adapter = load_foundation_adapter("chronos", "amazon/chronos-t5-tiny", "cpu")
+
+target_emb = run_embedding_pipeline(target, adapter, window_size=128, stride=1)
+background_emb = run_embedding_pipeline(background, adapter, window_size=128, stride=1)
+
+cer = CER(
+    latent_representations=target_emb.embeddings,           # (1073, 256)
+    change_points=[400, 800],
+    background_latent_representations=background_emb.embeddings,
+    starts=target_emb.starts,
+    ends=target_emb.ends - 1,                                # exclusive -> inclusive
+    background_starts=background_emb.starts,
+    background_ends=background_emb.ends - 1,
+    n_side=128,
+)
+
+rows = cer.evaluate()              # one dict per change point
+cer.score()                        # mean CER
+cer.change_preserving_rate()       # fraction with CER > 1
+```
+
+
+## Change-point detection with foundation models
+
+The offline change-point detection pipeline includes latent representation extraction, denoising, univariate projection and detection using scan. The steps of running the foundation model detection pipelines are as follows:
+
 
 1. **Update the configuration file.**
 
