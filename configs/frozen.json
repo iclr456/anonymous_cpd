@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "output_dir": "../results/example_jobs",
+  "output_dir": "../outputs/frozen_experiment",
   "runtime": {
     "foundation_python": "",
     "scan_python": ""
   },
   "cpd": {
     "tv": {
-      "weight": 8.0,
+      "weight": 2.0,
       "max_iterations": 200,
       "tolerance": 1e-05,
       "drop_edge_statistics": true
@@ -19,7 +19,7 @@
     },
     "scan": {
       "alpha": 0.05,
-      "n_boot": 19,
+      "n_boot": 400,
       "taper": "tukey",
       "change_type": "distribution",
       "random_state": 0,
@@ -34,26 +34,48 @@
   },
   "jobs": [
     {
-      "id": "synthetic",
+      "id": "series_chronos",
       "modality": "time_series",
       "input": {
-        "path": "../examples/synthetic.csv",
+        "path": "../data/series.csv",
         "delimiter": ",",
         "skiprows": 1,
         "columns": [
           0
-        ],
-        "npz_key": "values"
+        ]
       },
       "model": {
-        "key": "synthetic",
-        "backend": "summary",
+        "key": "chronos_t5_tiny",
+        "backend": "chronos",
+        "path": "../models/chronos_t5_tiny",
         "batch_size": 32
       },
       "embedding": {
         "context_length": 128,
         "stride": 1,
         "device": "cpu"
+      }
+    },
+    {
+      "id": "video_dinov2",
+      "modality": "vision",
+      "input": {
+        "path": "../data/frames/clip"
+      },
+      "model": {
+        "name": "dinov2_vits14",
+        "repository": "../models/dinov2",
+        "checkpoint": "../models/dinov2_vits14_pretrain.pth"
+      },
+      "embedding": {
+        "device": "cpu",
+        "batch_size": 5
+      },
+      "cpd": {
+        "tv": {
+          "weight": 3.0,
+          "drop_edge_statistics": false
+        }
       }
     }
   ]

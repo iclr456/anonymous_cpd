@@ -2,9 +2,10 @@ import json
 from pathlib import Path
 import unittest
 import numpy as np
-from tsfm_cpd.pipeline import compute_statistics
-from tsfm_cpd.utils import SummaryAdapter
-from tsfm_cpd.core import create_context_windows
+from detection.pipeline import compute_statistics
+from detection.utils import SummaryAdapter
+from detection.core import run_embedding_pipeline
+from time_series_preprocessing import create_context_windows
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -12,13 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 class NumericalTests(unittest.TestCase):
     def test_reference_outputs(self):
         config = json.loads((ROOT / "configs/example.json").read_text())
-        config["embedding"]["context_length"] = 32
+        config = config["cpd"]
         with np.load(ROOT / "tests/fixtures/reference.npz") as reference:
-            result = compute_statistics(reference["series"], SummaryAdapter(), config)
-            np.testing.assert_array_equal(result.source_indices, reference["source_indices"])
-            np.testing.assert_allclose(result.embeddings.embeddings, reference["embeddings"], rtol=1e-6, atol=1e-7)
-            np.testing.assert_allclose(result.denoised, reference["denoised"], rtol=1e-6, atol=1e-7)
-            for name, values in result.statistics.items():
+            embedded = run_embedding_pipeline(reference["series"], SummaryAdapter(), window_size=32)
+            denoised, geometry, statistics, indices = compute_statistics(embedded.embeddings, embedded.ends - 1, config)
+            np.testing.assert_array_equal(indices, reference["source_indices"])
+            np.testing.assert_allclose(embedded.embeddings, reference["embeddings"], rtol=1e-6, atol=1e-7)
+            np.testing.assert_allclose(denoised, reference["denoised"], rtol=1e-6, atol=1e-7)
+            for name, values in statistics.items():
                 np.testing.assert_allclose(values, reference[name], rtol=1e-6, atol=1e-7)
 
     def test_window_alignment(self):

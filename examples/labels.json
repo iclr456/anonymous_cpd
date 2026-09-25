@@ -1,7 +1,0 @@
-{
-  "change_points": [
-    200,
-    400
-  ],
-  "index_convention": "zero-based first sample of the new segment"
-}

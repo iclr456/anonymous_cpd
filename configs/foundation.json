@@ -1,127 +1,350 @@
 {
-  "input": {
-    "path": "../examples/synthetic.csv",
-    "delimiter": ",",
-    "skiprows": 1,
-    "columns": [
-      0
-    ],
-    "npz_key": "values"
-  },
-  "output_dir": "../results/foundation",
+  "schema_version": 1,
+  "output_dir": "../results/foundation_jobs",
   "runtime": {
     "foundation_python": "",
     "scan_python": ""
   },
-  "embedding": {
-    "context_length": 128,
-    "stride": 1,
-    "device": "cpu"
+  "cpd": {
+    "tv": {
+      "weight": 8.0,
+      "max_iterations": 200,
+      "tolerance": 1e-05,
+      "drop_edge_statistics": true
+    },
+    "windows": {
+      "min_window": 15,
+      "n_windows": 7,
+      "seed": 0
+    },
+    "scan": {
+      "alpha": 0.05,
+      "n_boot": 400,
+      "taper": "tukey",
+      "change_type": "distribution",
+      "random_state": 0,
+      "n_jobs": 1,
+      "vote_thresholds": [
+        0.25,
+        0.4,
+        0.5,
+        0.6
+      ]
+    }
   },
-  "tv": {
-    "weight": 8.0,
-    "max_iterations": 200,
-    "tolerance": 1e-05,
-    "drop_edge_statistics": true
-  },
-  "windows": {
-    "min_window": 15,
-    "n_windows": 7,
-    "seed": 0
-  },
-  "scan": {
-    "alpha": 0.05,
-    "n_boot": 400,
-    "taper": "tukey",
-    "change_type": "distribution",
-    "random_state": 0,
-    "n_jobs": 1,
-    "vote_thresholds": [
-      0.25,
-      0.4,
-      0.5,
-      0.6
-    ]
-  },
-  "timesfm1_source": "../vendor/timesfm1",
-  "models": [
+  "jobs": [
     {
-      "key": "chronos_t5_tiny",
-      "backend": "chronos",
-      "path": "../models/chronos_t5_tiny",
-      "batch_size": 32
+      "id": "chronos_t5_tiny",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "chronos_t5_tiny",
+        "backend": "chronos",
+        "path": "../models/chronos_t5_tiny",
+        "batch_size": 32
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "chronos_bolt_tiny",
-      "backend": "chronos",
-      "path": "../models/chronos_bolt_tiny",
-      "batch_size": 32
+      "id": "chronos_bolt_tiny",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "chronos_bolt_tiny",
+        "backend": "chronos",
+        "path": "../models/chronos_bolt_tiny",
+        "batch_size": 32
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "chronos_2",
-      "backend": "chronos",
-      "path": "../models/chronos_2",
-      "batch_size": 24
+      "id": "chronos_2",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "chronos_2",
+        "backend": "chronos",
+        "path": "../models/chronos_2",
+        "batch_size": 24
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "chronos_bolt_base",
-      "backend": "chronos",
-      "path": "../models/chronos_bolt_base",
-      "batch_size": 24
+      "id": "chronos_bolt_base",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "chronos_bolt_base",
+        "backend": "chronos",
+        "path": "../models/chronos_bolt_base",
+        "batch_size": 24
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "moment_small",
-      "backend": "moment",
-      "path": "../models/moment_small",
-      "batch_size": 32
+      "id": "moment_small",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "moment_small",
+        "backend": "moment",
+        "path": "../models/moment_small",
+        "batch_size": 32
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "moirai_small",
-      "backend": "moirai",
-      "path": "../models/moirai_small",
-      "batch_size": 32
+      "id": "moirai_small",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "moirai_small",
+        "backend": "moirai",
+        "path": "../models/moirai_small",
+        "batch_size": 32
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "moirai_moe_small",
-      "backend": "moirai_moe",
-      "path": "../models/moirai_moe_small",
-      "batch_size": 24
+      "id": "moirai_moe_small",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "moirai_moe_small",
+        "backend": "moirai_moe",
+        "path": "../models/moirai_moe_small",
+        "batch_size": 24
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "timesfm_1_0",
-      "backend": "timesfm1",
-      "path": "../models/timesfm_1_0",
-      "batch_size": 16
+      "id": "timesfm_1_0",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "timesfm_1_0",
+        "backend": "timesfm1",
+        "path": "../models/timesfm_1_0",
+        "batch_size": 16,
+        "timesfm1_source": "../models/timesfm1"
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "timesfm_2_5",
-      "backend": "timesfm25",
-      "path": "../models/timesfm_2_5",
-      "batch_size": 16
+      "id": "timesfm_2_5",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "timesfm_2_5",
+        "backend": "timesfm25",
+        "path": "../models/timesfm_2_5",
+        "batch_size": 16
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "chronos_t5_large",
-      "backend": "chronos",
-      "path": "../models/chronos_t5_large",
-      "batch_size": 8
+      "id": "chronos_t5_large",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "chronos_t5_large",
+        "backend": "chronos",
+        "path": "../models/chronos_t5_large",
+        "batch_size": 8
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "moment_large",
-      "backend": "moment",
-      "path": "../models/moment_large",
-      "batch_size": 12
+      "id": "moment_large",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "moment_large",
+        "backend": "moment",
+        "path": "../models/moment_large",
+        "batch_size": 12
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "moirai_base",
-      "backend": "moirai",
-      "path": "../models/moirai_base",
-      "batch_size": 24
+      "id": "moirai_base",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "moirai_base",
+        "backend": "moirai",
+        "path": "../models/moirai_base",
+        "batch_size": 24
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     },
     {
-      "key": "moirai_moe_base",
-      "backend": "moirai_moe",
-      "path": "../models/moirai_moe_base",
-      "batch_size": 8
+      "id": "moirai_moe_base",
+      "modality": "time_series",
+      "input": {
+        "path": "../examples/synthetic.csv",
+        "delimiter": ",",
+        "skiprows": 1,
+        "columns": [
+          0
+        ],
+        "npz_key": "values"
+      },
+      "model": {
+        "key": "moirai_moe_base",
+        "backend": "moirai_moe",
+        "path": "../models/moirai_moe_base",
+        "batch_size": 8
+      },
+      "embedding": {
+        "context_length": 128,
+        "stride": 1,
+        "device": "cpu"
+      }
     }
   ]
 }

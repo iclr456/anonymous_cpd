@@ -1,6 +1,4 @@
 """SCAN scoring, thresholding, and original-series index alignment."""
-import json
-from pathlib import Path
 
 import numpy as np
 import scan
@@ -82,28 +80,3 @@ def detect_statistics(statistics, source_indices, config):
             ]
     return report
 
-
-def detect(config):
-    """Run detection on saved statistics for every configured model.
-
-    Args:
-        config: Resolved configuration containing ``output_dir``, ``models``,
-            detector window settings, and SCAN options.
-
-    Loads statistics.npz from each model's output directory, including its
-    context-window endpoint mapping stored as ``source_indices``. Calls
-    detect_statistics() and writes the report to detections.json in that
-    directory, replacing any existing report. Returns None.
-    """
-    for model in config["models"]:
-        directory = Path(config["output_dir"]) / model["key"]
-        with np.load(directory / "statistics.npz", allow_pickle=False) as archive:
-            statistics = {key: archive[key] for key in archive.files if key != "source_indices"}
-            results = detect_statistics(statistics, archive["source_indices"], config)
-        report = {
-            "model": model["key"],
-            "index_convention": "zero-based source row; right embedding endpoint",
-            "statistics": results,
-        }
-        (directory / "detections.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-        print(f"SCAN complete: {model['key']}", flush=True)

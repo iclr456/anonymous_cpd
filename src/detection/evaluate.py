@@ -1,6 +1,6 @@
 """Evaluate saved detections using one-to-one matching within a tolerance.
 
-Example: python experiments/evaluate.py --predictions results/example/synthetic/detections.json --labels examples/labels.json --tolerance 24 --output results/metrics.csv
+Example: python -m detection.evaluate --predictions outputs/example/series_summary/detections.json --labels examples/unified_labels.json --tolerance 24 --output results/metrics.csv
 """
 import argparse
 import csv

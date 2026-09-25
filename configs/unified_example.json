@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "output_dir": "../results/example_jobs",
+  "output_dir": "../outputs/example",
   "runtime": {
     "foundation_python": "",
     "scan_python": ""
   },
   "cpd": {
     "tv": {
-      "weight": 8.0,
+      "weight": 2.0,
       "max_iterations": 200,
       "tolerance": 1e-05,
       "drop_edge_statistics": true
@@ -34,26 +34,32 @@
   },
   "jobs": [
     {
-      "id": "synthetic",
+      "id": "series_summary",
       "modality": "time_series",
       "input": {
-        "path": "../examples/synthetic.csv",
-        "delimiter": ",",
-        "skiprows": 1,
-        "columns": [
-          0
-        ],
-        "npz_key": "values"
+        "path": "../examples/series.npy"
       },
       "model": {
-        "key": "synthetic",
+        "key": "summary",
         "backend": "summary",
         "batch_size": 32
       },
       "embedding": {
-        "context_length": 128,
+        "context_length": 32,
         "stride": 1,
         "device": "cpu"
+      }
+    },
+    {
+      "id": "vision_saved",
+      "modality": "embeddings",
+      "input": {
+        "path": "../examples/vision_embeddings.npz"
+      },
+      "cpd": {
+        "tv": {
+          "drop_edge_statistics": false
+        }
       }
     }
   ]

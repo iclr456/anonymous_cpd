@@ -1,12 +1,36 @@
-# Time-series change-point detection using foundation models
+# Change-point detection using foundation models
 
-This repository contains code for time-series change-point detection using foundation models. The offline detector turns windowed embeddings into scalar statistics and applies a SCAN window ensemble. Vision foundation models for generic event boundary detection are also listed below; vision adapters are not included in the current package.
-
-The proposed framework consists of the following
+One offline pipeline for time-series and video embeddings: context windows,
+foundation-model embeddings, covariance fitting, TV denoising, four scalar
+statistics, and SCAN change-point detection.
 
 ## Quick start
 
-First, download the model checkpoints you want to use from Hugging Face. To test a single model, download only that model and keep only its entry in the `models` list in your configs file. Set its `path` to the downloaded model directory.
+Install the dependencies using `requirements.txt` for your foundation environment,
+then install this package. The requirements file is an environment snapshot with
+a CUDA-specific PyTorch build; install only the backends needed for your models.
+
+```sh
+python -m pip install -r requirements.txt
+python -m pip install -e ".[scan]"
+python -m detection --config configs/example.json
+python -m detection.evaluate --predictions results/example_jobs/synthetic/detections.json --labels examples/labels.json --tolerance 24 --output results/example_jobs/metrics.csv
+```
+
+The example uses deterministic window summaries and requires no model weights.
+It checks the processing path, not foundation-model accuracy. The 600-observation
+signal changes at zero-based indices 200 and 400; SCAN uses 19 bootstrap samples.
+Use a fresh output directory when changing settings or inputs.
+
+For an example with both time-series data and saved vision-shaped embeddings:
+
+```sh
+python examples/make_inputs.py
+python -m detection --config configs/unified_example.json
+```
+
+Download only the models you need and keep their entries in the configuration's
+`jobs` list. Set each job's `model.path` to its downloaded model directory.
 
 **Time-series foundation models**
 
@@ -35,94 +59,165 @@ First, download the model checkpoints you want to use from Hugging Face. To test
 | DINOv2 ViT-S/14 | DINOv2-S/14 | [facebook/dinov2-small](https://huggingface.co/facebook/dinov2-small) |
 | DINOv2 ViT-B/14 | DINOv2-B/14 | [facebook/dinov2-base](https://huggingface.co/facebook/dinov2-base) |
 
-These vision checkpoints are references for event boundary detection; the CLI below currently supports time-series inputs and adapters only.
 
-**Install and run**
+TimesFM 1.0 requires the PyTorch `torch_model.ckpt` checkpoint linked above.
+`configs/foundation.json` contains 13 time-series jobs, including Moirai Base and
+Moirai-MoE Base. It does not include Moirai Large by default.
 
-Next, install the dependencies using the `requirements.txt` file. Run the following command from the repository root:
+Vision jobs require local DINO/DINOv2 source checkouts and plain state-dictionary
+checkpoints, or a local ResNet-50 checkpoint. The current vision loader does not
+load Hugging Face model directories directly. Install `.[scan,vision]` for video
+and image dependencies. No downloads are initiated by the runner.
 
-```sh
-python -m pip install -r requirements.txt
-```
+## USC-HAD dataset example
 
-Then install the package and run the small synthetic example:
-
-```sh
-python -m pip install -e ".[scan]"
-python -m tsfm_cpd --config configs/example.json
-python experiments/evaluate.py --predictions results/example/synthetic/detections.json --labels examples/labels.json --tolerance 24 --output results/example/metrics.csv
-```
-
-The example uses a deterministic window-summary adapter. It checks the complete processing path without downloading weights; its results are not foundation-model benchmark results. The synthetic signal contains 600 observations with changes at zero-based indices 200 and 400. SCAN uses only 19 bootstrap samples in this example to keep it quick.
-
-For the Python API, see `examples/minimal.py`. `detect_changes(series, adapter, config)` returns a dictionary keyed by statistic, including detections at each configured voting threshold. It does not read labels or tune against them.
-
-## Foundation models
-
-`configs/foundation.json` lists the 13 model variants supported by the existing adapters. Put weights in the configured model folders, or change their paths. Paths are relative to the JSON configuration file. Install the dependencies required by the selected backend; the files in `environments/` record the previous environments, including a CUDA-specific PyTorch build. These are reference snapshots, not portable lockfiles or a promise of a successful fresh installation on every platform.
-
-Backends are Chronos, MOMENT, Moirai, Moirai-MoE, TimesFM 1.0, and TimesFM 2.5. Unrelated model libraries are imported only when needed. TimesFM 1.0 decoder code and its license are retained under `vendor/`.
-
-To use separate foundation and SCAN environments, install this package in both environments and set `runtime.foundation_python` and `runtime.scan_python` in a local copy of the configuration. Empty strings mean the current interpreter. Alternatively run stages explicitly:
+[examples/usc_had](examples/usc_had/README.md) includes the six processed USC-HAD
+accelerometer series, separate labels, and train/test configurations. It preserves
+the main pipeline's seeded, whole-series 30/70 split: TS1 and TS5 for training/tuning;
+TS2, TS3, TS4, and TS6 held out. Rounding gives 2/6 and 4/6 series (33.3%/66.7%).
 
 ```sh
-python -m tsfm_cpd --config configs/foundation.json --stage extract
-python -m tsfm_cpd --config configs/foundation.json --stage scan
+python -m detection --config examples/usc_had/train.json
+python -m detection --config examples/usc_had/test.json
 ```
 
-## Method and conventions
+The example uses summary embeddings without downloaded weights. See its README
+for foundation-model configurations, regeneration, and evaluation commands.
 
-1. Load finite numeric values shaped `(time, channels)`. CSV column selection must exclude timestamps and labels. There is no implicit imputation or input normalization.
-2. Extract complete context windows, embed them, and pool channels according to the model adapter.
-3. Fit centered Ledoit-Wolf covariance geometry on the raw embeddings.
-4. Apply TV denoising separately to every embedding coordinate.
-5. Compute consecutive scaled dot product, cosine similarity, covariance-adjusted scaled dot product, and covariance-adjusted cosine similarity. Optionally trim the first and last statistic.
-6. Standardize each statistic and run SCAN over the selected detector windows. Constant statistics produce no detections; undefined statistics raise errors.
-7. Apply inclusive voting thresholds to native SCAN scores, preserving its grouping.
-8. Map indices to the final observation of the right-hand embedding window.
+## One runner and configuration format
 
-Embedding context length and detector window sizes are different settings. The default context length is 128. Seven detector windows are selected deterministically subject to SCAN bounds; short inputs that cannot support these windows fail explicitly. There is no voting across models or statistics.
+Every configuration uses `schema_version: 1`, shared `cpd` settings, and a `jobs`
+list. Each job has a unique `id`, `modality`, and `input`, plus model and embedding
+settings when extracting new embeddings. Supported modalities are `time_series`,
+`vision`, and `embeddings`. Per-job `cpd` overrides merge one section at a time.
+All paths are resolved relative to the configuration file.
 
-Indices are zero-based. Endpoint alignment does not correct context-window detection delay. Covariance fitting, TV smoothing, and statistic standardization use the full series: this implementation is offline, not causal.
+- `configs/example.json`: summary embeddings of the synthetic time series.
+- `configs/unified_example.json`: time-series and saved vision embeddings.
+- `configs/foundation.json`: 13 local time-series foundation-model jobs.
+- `configs/frozen.json`: template for local time-series and vision experiments.
 
-## Repository layout
-
-- `src/tsfm_cpd/`: numerical routines, adapters, configuration, artifacts, and CLI.
-- `configs/`: portable example and foundation-model configurations.
-- `experiments/evaluate.py`: evaluation of saved predictions; labels never enter detection.
-- `paper/plot_metrics.py`: plots saved measured scores without changing them.
-- `examples/`: a synthetic signal, its labels, and the Python API example.
-- `tests/`: numerical reference, alignment, window-selection, SCAN, and matching tests.
-
-Each model produces `embeddings.npz`, `tv_embeddings.npz`, `covariance.npz`, `statistics.npz`, and `detections.json`. Stage manifests record resolved settings, the input SHA-256 checksum, Python, and relevant package versions. Output files at the chosen location are overwritten on rerun; use a different output directory to retain a run. Record the exact downloaded weight revision separately in the model configuration when preparing an experiment.
-
-## Evaluation
-
-The provided evaluator uses one-to-one maximum-cardinality matching within an inclusive tolerance. Multiple predictions cannot receive credit for the same label. Duplicate indices are collapsed. Both-empty inputs score 1; an empty prediction or label set paired with a nonempty set scores 0. This is an explicit new evaluation utility; equivalence to every historical benchmark evaluator has not been established.
-
-Thresholds are reported separately, with no automatic selection of the best test score. Label-based oracle searches and dataset-specific paper experiments have not been migrated. Add their frozen configurations and clearly documented selection protocols before claiming paper reproduction.
-
-Optional figure generation:
+Run any of these with the same command:
 
 ```sh
-python -m pip install -e ".[plots]"
-python paper/plot_metrics.py results/example/metrics.csv results/example/metrics.png
+python -m detection --config configs/foundation.json
 ```
 
-## Tests
+The installed `cpd` command invokes this same runner. The old `models`-based
+configuration, `detection.cli` command, and array-based package-level API have
+been replaced. Existing custom configurations must use the `jobs` format shown
+in the supplied examples. For the Python API, see `examples/minimal.py`:
+`load_config(path)` followed by `run_stage(config, "extract")` and
+`run_stage(config, "scan")`.
 
-In an environment with numerical and SCAN dependencies:
+For separate environments, install this package in both and set
+`runtime.foundation_python` and `runtime.scan_python`. Empty strings use the
+current interpreter. Or run each stage explicitly in its corresponding environment:
+
+```sh
+python -m detection --config configs/foundation.json --stage extract
+python -m detection --config configs/foundation.json --stage scan
+```
+
+## Inputs and preprocessing
+
+```text
+src/
+  time_series_preprocessing.py
+  video_preprocessing.py
+  detection/
+```
+
+Time-series inputs are finite numeric CSV, NPY, or NPZ arrays shaped
+`(time, channels)`. Select columns to exclude timestamps and labels. There is no
+implicit imputation. Complete context windows are unpadded, and incomplete tails
+are omitted. Their anchors are the final observations in the original series.
+
+Video inputs are videos or naturally ordered frame directories. OpenCV decodes
+videos to 224x224 RGB frames. The image encoders use ImageNet normalization.
+Video context windows are centered, with repeated boundary frames; the default
+is a five-frame mean of embeddings. Anchors are zero-based frame positions.
+
+Saved embedding inputs are NPZ archives containing finite `(time, features)`
+`embeddings` and strictly increasing integer `source_indices`, one per embedding.
+These embeddings must already be pooled. Existing GEBD archives can use their
+`frame_numbers - 1` as source anchors.
+
+The preprocessing scripts can also export windows independently:
+
+```sh
+python src/time_series_preprocessing.py --input examples/synthetic.csv --skiprows 1 --context-length 128 --output results/time_windows.npz
+python src/video_preprocessing.py --input path/to/video.mp4 --context-length 5 --output results/video_frames
+```
+
+Time-series exports contain windows, starts, and exclusive ends. Video exports
+contain decoded PNGs, timestamps, and `context_windows.npz` with frame-index
+windows and center anchors. These are inspection/export outputs, not embedding
+inputs. The runner uses the same preprocessing functions internally.
+
+## Method and outputs
+
+The shared numerical function in `detection/pipeline.py` fits centered Ledoit-Wolf
+geometry on raw embeddings, denoises each coordinate with TV, and computes four
+consecutive statistics: scaled dot product, cosine similarity, and their
+covariance-adjusted counterparts. Optional edge trimming removes the first and
+last statistics and their anchors together.
+
+`detection/detection.py` standardizes each projected series and calls SCAN with
+windows generated by `utils.generate_window_sizes()`. Voting thresholds are
+inclusive and preserve native SCAN grouping. Constant series produce no changes;
+undefined statistics fail explicitly. There is no cross-model/statistic voting.
+
+Embedding context length and SCAN detector window sizes are separate settings.
+All indices are zero-based. A comparison is anchored at its right-hand embedding:
+the context-window endpoint for time series or center frame for vision.
+This mapping does not correct context-window delay. Full-series covariance
+fitting, TV smoothing, and standardization make this an offline method.
+
+`output_dir/<job-id>/` contains `embeddings.npz`, `tv_embeddings.npz`,
+`covariance.npz`, `statistics.npz`, and `detections.json`. The output root records
+resolved settings, input content hashes, and stage environment versions. Changed
+inputs or settings require a fresh output directory. Partial artifacts are not
+completion markers, and concurrent writers are unsupported. Record exact model
+weight revisions separately.
+
+## Evaluation and tests
+
+Evaluation is separate from detection and does not use labels for parameter
+selection. It uses one-to-one maximum-cardinality matching within an inclusive
+absolute tolerance. Duplicates are collapsed; both-empty inputs score 1 and
+one-empty inputs score 0. Thresholds are reported separately. This evaluator
+does not replace vision best-annotator/relative-tolerance benchmark protocols.
 
 ```sh
 python -m unittest discover -s tests -v
 ```
 
-With separate environments, run `test_numerics.py` in the foundation environment and `test_detection.py` in the SCAN environment, using unittest's `-p` option. `test_evaluation.py` requires only the standard library.
+With separate environments, run numerical and preprocessing tests in the
+foundation environment and `test_detection.py` in the SCAN environment using
+unittest's `-p` option. Set `CPD_SCAN_PYTHON` to the SCAN interpreter when running
+`test_unified.py` in the foundation environment. Evaluation tests require only
+the standard library. The numerical fixture checks embeddings, TV output, four
+statistics, and index alignment against saved reference outputs.
 
-The numerical fixture compares raw embeddings, TV output, four statistics, and index alignment with outputs generated by the previous implementation on a fixed synthetic input. It does not validate every foundation model. A full 13-model run and a clean dependency installation have not been performed for this release.
+Optional plotting:
 
-## Anonymous submission
+```sh
+python -m pip install -e ".[plots]"
+python paper/plot_metrics.py results/example_jobs/metrics.csv results/example_jobs/metrics.png
+```
 
-This folder is a local release candidate, not a published repository. Start a fresh repository from its source files; do not copy the parent repository history, environments, model weights, caches, local settings, or generated results. Runtime manifests contain resolved local paths and must be reviewed before sharing. Keep third-party notices intact. Choose an appropriate license for your own code before publication; this export does not assign one on your behalf.
+Actual foundation-model inference and video decoding need local weights and the
+corresponding dependencies; synthetic tests do not establish model accuracy.
+Vision now shares the time-series TV solver and SCAN semantics, which differ from
+historical vision experiments. Revalidate frozen parameters before reproduction
+claims. No label-based oracle selection is performed.
 
-The reconstructed and deliberately modified plots from the working project are not included. Paper evidence must come from measured experiment outputs.
+## Provenance and anonymous submission
+
+TimesFM 1.0 source and its license remain in `models/timesfm1/`. Preserve third-party
+notices. For an installed wheel, retain the TimesFM source directory separately and set
+`model.timesfm1_source` accordingly. No license for user-authored code is assigned
+by this export. Review runtime manifests for local paths before sharing. Exclude
+weights, environments, caches, generated results, and parent repository history
+from an anonymous release. Paper evidence must come from measured outputs.

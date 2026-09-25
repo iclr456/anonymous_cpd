@@ -1,43 +1,11 @@
 """Configuration, input loading, artifact persistence, summary embeddings, and SCAN utilities."""
-import hashlib
-import importlib.metadata
+import copy
 import json
 import math
 import random
 from pathlib import Path
-import platform
-import sys
 import numpy as np
-from .core import save_embedding_result, validate_series
-
-
-def save_statistics(result, directory):
-    directory = Path(directory)
-    directory.mkdir(parents=True, exist_ok=True)
-    save_embedding_result(result.embeddings, directory / "embeddings.npz")
-    np.savez_compressed(directory / "tv_embeddings.npz", embeddings=result.denoised)
-    np.savez_compressed(directory / "statistics.npz", **result.statistics,
-                        source_indices=result.source_indices)
-    np.savez_compressed(directory / "covariance.npz", **result.geometry)
-
-
-def save_manifest(config, stage):
-    output = Path(config["output_dir"])
-    output.mkdir(parents=True, exist_ok=True)
-    versions = {}
-    for name in ("numpy", "scipy", "scikit-learn", "torch", "scan-py",
-                 "chronos-forecasting", "momentfm", "uni2ts", "timesfm"):
-        try:
-            versions[name] = importlib.metadata.version(name)
-        except importlib.metadata.PackageNotFoundError:
-            pass
-    checksum = hashlib.sha256()
-    with Path(config["input"]["path"]).open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            checksum.update(block)
-    manifest = dict(python=sys.version, platform=platform.system(), packages=versions,
-                    input_sha256=checksum.hexdigest(), config=config)
-    (output / f"manifest_{stage}.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+from time_series_preprocessing import validate_series
 
 
 class SummaryAdapter:
@@ -118,34 +86,69 @@ def format_scan_result(result, length, windows, thresholds):
                 votes=votes, per_window=per_window, detections=detections)
 
 
+def simple_name(value):
+    if not isinstance(value, str) or not value or value in ('.', '..') or any(c in value for c in '/\\:'):
+        raise ValueError('Job IDs must be simple directory names')
+    return value
+
+
 def load_config(path):
+    """Load schema-version-1 jobs, merge CPD overrides, and resolve local paths."""
     path = Path(path).resolve()
-    config = json.loads(path.read_text(encoding="utf-8"))
-
+    c = json.loads(path.read_text(encoding='utf-8'))
+    if c.get('schema_version') != 1 or not c.get('jobs'):
+        raise ValueError('schema_version=1 and nonempty jobs required')
     def resolve(value):
-        candidate = Path(value).expanduser()
-        return str((path.parent / candidate).resolve())
-
-    config["input"]["path"] = resolve(config["input"]["path"])
-    config["output_dir"] = resolve(config["output_dir"])
-    if config.get("timesfm1_source"):
-        config["timesfm1_source"] = resolve(config["timesfm1_source"])
-    keys = [model["key"] for model in config["models"]]
-    if not keys or len(set(keys)) != len(keys):
-        raise ValueError("Provide at least one model, with unique model keys")
-    for model in config["models"]:
-        key = model["key"]
-        if not key or key in {".", ".."} or any(c in key for c in '/\\:'):
-            raise ValueError("Model keys must be simple directory names")
-        if "path" in model:
-            model["path"] = resolve(model["path"])
-    for key, value in config.get("runtime", {}).items():
+        return str((path.parent / Path(value).expanduser()).resolve())
+    c['output_dir'] = resolve(c['output_dir'])
+    for key, value in c.get('runtime', {}).items():
         if value:
-            config["runtime"][key] = resolve(value)
-    if config["embedding"]["context_length"] < 1 or config["embedding"]["stride"] < 1:
-        raise ValueError("Context length and stride must be positive")
-    if not config["scan"]["vote_thresholds"] or any(
-        not 0 <= threshold <= 1 for threshold in config["scan"]["vote_thresholds"]
-    ):
-        raise ValueError("Voting thresholds must lie in [0, 1]")
-    return config
+            c['runtime'][key] = resolve(value)
+    ids = []
+    for job in c['jobs']:
+        ids.append(simple_name(job['id']))
+        if job['modality'] not in ('time_series', 'vision', 'embeddings'):
+            raise ValueError('Unknown modality')
+        job['input']['path'] = resolve(job['input']['path'])
+        if job['modality'] == 'time_series':
+            embedding = job['embedding']
+            for key in ('context_length', 'stride'):
+                value = embedding[key]
+                if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                    raise ValueError(f'{key} must be a positive integer')
+            if job['model']['batch_size'] < 1:
+                raise ValueError('batch_size must be positive')
+        for key in ('path', 'repository', 'checkpoint', 'timesfm1_source'):
+            if job.get('model', {}).get(key):
+                job['model'][key] = resolve(job['model'][key])
+        settings = copy.deepcopy(c['cpd'])
+        for key, value in job.get('cpd', {}).items():
+            if isinstance(value, dict) and isinstance(settings.get(key), dict):
+                settings[key].update(value)
+            else:
+                settings[key] = value
+        job['cpd'] = settings
+        tv, scan = settings['tv'], settings['scan']
+        if not np.isfinite(tv['weight']) or tv['weight'] < 0 or tv['max_iterations'] < 1 or tv['tolerance'] <= 0:
+            raise ValueError('Invalid TV settings')
+        votes = scan['vote_thresholds']
+        if not votes or any(not 0 <= v <= 1 for v in votes) or len(set(votes)) != len(votes):
+            raise ValueError('Invalid or duplicate voting thresholds')
+        if scan['n_boot'] < 1 or not 0 < scan['alpha'] < 1:
+            raise ValueError('Invalid SCAN bootstrap count or alpha')
+        source, output = Path(job['input']['path']), Path(c['output_dir'])
+        if not source.exists():
+            raise FileNotFoundError(source)
+        if output == source or source in output.parents or output in source.parents:
+            raise ValueError('Inputs and output must be separate paths')
+    if len(set(ids)) != len(ids):
+        raise ValueError('Duplicate job IDs')
+    return c
+
+
+def json_save(path, value):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, allow_nan=False), encoding="utf-8")
+
+

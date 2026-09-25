@@ -5,7 +5,9 @@ __pycache__/
 build/
 dist/
 results/
-models/
+/models/*
+!/models/timesfm1/
 data/
+!examples/usc_had/data/
 *.local.json
 .pytest_cache/

@@ -12,9 +12,15 @@ dependencies = ["numpy", "scipy", "scikit-learn"]
 [project.optional-dependencies]
 scan = ["scan-py==0.2.1"]
 plots = ["matplotlib"]
+vision = ["torch", "torchvision", "Pillow", "opencv-python", "pandas"]
 
 [project.scripts]
-tsfm-cpd = "tsfm_cpd.cli:main"
+cpd = "detection.runner:main"
+cpd-evaluate = "detection.evaluate:main"
+
+[tool.setuptools]
+py-modules = ["time_series_preprocessing", "video_preprocessing"]
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
