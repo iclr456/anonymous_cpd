@@ -1,0 +1,54 @@
+{
+  "input": {
+    "path": "../examples/synthetic.csv",
+    "delimiter": ",",
+    "skiprows": 1,
+    "columns": [
+      0
+    ],
+    "npz_key": "values"
+  },
+  "output_dir": "../results/example",
+  "runtime": {
+    "foundation_python": "",
+    "scan_python": ""
+  },
+  "embedding": {
+    "context_length": 128,
+    "stride": 1,
+    "device": "cpu"
+  },
+  "tv": {
+    "weight": 8.0,
+    "max_iterations": 200,
+    "tolerance": 1e-05,
+    "drop_edge_statistics": true
+  },
+  "windows": {
+    "min_window": 15,
+    "n_windows": 7,
+    "seed": 0
+  },
+  "scan": {
+    "alpha": 0.05,
+    "n_boot": 19,
+    "taper": "tukey",
+    "change_type": "distribution",
+    "random_state": 0,
+    "n_jobs": 1,
+    "vote_thresholds": [
+      0.25,
+      0.4,
+      0.5,
+      0.6
+    ]
+  },
+  "timesfm1_source": "../vendor/timesfm1",
+  "models": [
+    {
+      "key": "synthetic",
+      "backend": "summary",
+      "batch_size": 32
+    }
+  ]
+}

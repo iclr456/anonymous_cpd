@@ -1,0 +1,14 @@
+# Snapshot of the existing foundation environment.
+--extra-index-url https://download.pytorch.org/whl/cu128
+numpy==2.5.1
+scipy==1.18.0
+scikit-learn==1.9.0
+torch==2.11.0+cu128
+chronos-forecasting==2.2.2
+momentfm==0.1.4
+uni2ts==2.0.0
+timesfm==2.0.2
+transformers==4.57.6
+huggingface-hub==0.36.2
+einops==0.8.2
+safetensors==0.8.0

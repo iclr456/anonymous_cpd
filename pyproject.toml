@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tsfm-cpd"
+version = "0.1.0"
+description = "Change-point detection from time-series embeddings"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "scikit-learn"]
+
+[project.optional-dependencies]
+scan = ["scan-py==0.2.1"]
+plots = ["matplotlib"]
+
+[project.scripts]
+tsfm-cpd = "tsfm_cpd.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
