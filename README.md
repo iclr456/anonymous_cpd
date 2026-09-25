@@ -4,6 +4,10 @@ One offline pipeline for time-series and video embeddings: context windows,
 foundation-model embeddings, covariance fitting, TV denoising, four scalar
 statistics, and SCAN change-point detection.
 
+[![Time-series change-point detection figure](resources/timeseries_pair.png)](resources/timeseries_pair%20%288%29.pdf)
+
+[![Video event-boundary detection figure](resources/video_pair.png)](resources/video_pair%20%283%29.pdf)
+
 ## Quick start
 
 Install the dependencies using `requirements.txt` for your foundation environment,
