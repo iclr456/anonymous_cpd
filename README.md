@@ -1,6 +1,6 @@
 # Change-point detection using foundation models
 
-This repository contains the code for **GAS-FM**, a training-free framework for change-point detection using frozen foundation-model representations. It supports both **time series** and **video**, and includes:
+This repository contains the code for **GAS-FM**, a training-free framework for change-point detection using frozen foundation-model representations. It supports both **time series** and **video** as shown below, and includes:
 - representation extraction from pretrained foundation models,
 - the GAS scalarization and change-point detection pipeline,
 - the **change-encoding rate (CER)**, which measures how well latent representations preserve annotated changes, and
