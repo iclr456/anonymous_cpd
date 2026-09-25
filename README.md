@@ -65,7 +65,7 @@ TimesFM 1.0 requires the PyTorch `torch_model.ckpt` checkpoint linked above.
 Moirai-MoE Base. It does not include Moirai Large by default.
 
 Vision jobs require local DINO/DINOv2 source checkouts and plain state-dictionary
-checkpoints, or a local ResNet-50 checkpoint. The current vision loader does not
+checkpoints. The current vision loader does not
 load Hugging Face model directories directly. Install `.[scan,vision]` for video
 and image dependencies. No downloads are initiated by the runner.
 

@@ -3,27 +3,21 @@ from pathlib import Path
 import numpy as np
 from video_preprocessing import image_files, frame_timestamps, spatial_transform, mean_embeddings
 from .utils import json_save
-SUPPORTED_MODELS = ('dino_vits16','dino_vitb16','dinov2_vits14','dinov2_vitb14','resnet50')
+SUPPORTED_MODELS = ('dino_vits16','dino_vitb16','dinov2_vits14','dinov2_vitb14')
 
 
 def load_model(name, cfg, cache):
     import torch
-    from torchvision import models
     if name not in SUPPORTED_MODELS:
         raise ValueError(f'Unknown model: {name}')
     torch.set_num_threads(cfg['cpu_threads'])
     torch.manual_seed(cfg['seed'])
     device = ('cuda' if torch.cuda.is_available() else 'cpu') if cfg['device']=='auto' else cfg['device']
-    if name=='resnet50':
-        model = models.resnet50(weights=None)
-        model.load_state_dict(torch.load(cfg['checkpoint'], map_location='cpu', weights_only=True))
-        model.fc = torch.nn.Identity()  # pooled 2048-D features, not classifier logits
-    else:
-        repository = cfg['dinov2_repository'] if name.startswith('dinov2') else cfg['dino_repository']
-        if not Path(repository).is_dir():
-            raise FileNotFoundError('A local DINO repository checkout is required')
-        model = torch.hub.load(repository,name,source='local',pretrained=False)
-        model.load_state_dict(torch.load(cfg['checkpoint'], map_location='cpu', weights_only=True))
+    repository = cfg['dinov2_repository'] if name.startswith('dinov2') else cfg['dino_repository']
+    if not Path(repository).is_dir():
+        raise FileNotFoundError('A local DINO repository checkout is required')
+    model = torch.hub.load(repository,name,source='local',pretrained=False)
+    model.load_state_dict(torch.load(cfg['checkpoint'], map_location='cpu', weights_only=True))
     return model.eval().to(device),device
 
 
