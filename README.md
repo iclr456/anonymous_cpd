@@ -63,7 +63,7 @@ The Change Encoding Ratio (CER) measures whether an annotated change in the inpu
 
 **Usage Example**
 
-```{python}
+```python
 from change_encoding_ratio import CER
 from detection.core import run_embedding_pipeline
 from detection.foundation_adapters import load_foundation_adapter
@@ -81,13 +81,13 @@ cer = CER(
     change_points=[400, 800],
     background_latent_representations=background_emb.embeddings,
     starts=target_emb.starts,
-    ends=target_emb.ends - 1,                                # exclusive -> inclusive
+    ends=target_emb.ends - 1,                               
     background_starts=background_emb.starts,
     background_ends=background_emb.ends - 1,
     n_side=128,
 )
 
-rows = cer.evaluate()              # one dict per change point
+rows = cer.evaluate()              
 cer.score()                        # mean CER
 cer.change_preserving_rate()       # fraction with CER > 1
 ```
