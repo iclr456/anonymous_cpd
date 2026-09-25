@@ -88,8 +88,7 @@ cer = CER(
 )
 
 rows = cer.evaluate()              
-cer.score()                        # mean CER
-cer.change_preserving_rate()       # fraction with CER > 1
+cer.score()                     
 ```
 
 
